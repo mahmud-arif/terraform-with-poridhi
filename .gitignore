@@ -1,0 +1,17 @@
+# local terraform directories 
+
+**/.terraform/*
+
+# .tfstate files
+
+*.tfstate
+*.tfstate.*
+
+# exclude all .ftvars file 
+
+*.tfvars
+
+.terraformrc
+terraform.rc
+
+.DS_Store
