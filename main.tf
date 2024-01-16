@@ -18,33 +18,26 @@ module "vpc_module" {
   source   = "./vpc"
   vpc_cidr = "10.0.0.0/16"
   vpc_name = "my_cluster_vpc"
-  subnet_configs = [
-    {
-      subnet_cidr_blocks = "10.0.1.0/24",
-      name               = "public_subnet",
-      allow_public_ip    = true,
-      availability_zone  = "us-east-1a"
-    },
+  public_subnet_configs = [
     {
       subnet_cidr_blocks = "10.0.2.0/24",
       name               = "private_subnet",
-      allow_public_ip    = false,
+      allow_public_ip    = true,
       availability_zone  = "us-east-1b"
   }]
+  private_subnet_configs = [
+    {
+      subnet_cidr_blocks = "10.0.1.0/24",
+      name               = "public_subnet",
+      availability_zone  = "us-east-1a"
+  }]
   igw_name = "my_igw"
-  nat_gateway_for_subnet = 
+
+  single_nat_gateway = true
 }
 
-# Create a subnet within the VPC
-# resource "aws_subnet" "public_subnet" {
-#   vpc_id                  = aws_vpc.my_vpc.id
-#   cidr_block              = "10.0.0.0/24" # Change to your desired CIDR block within your VPC range
-#   availability_zone       = "us-east-1a"  # Change to your desired availability zone
-#   map_public_ip_on_launch = true
-#       tags = {
-#        Name = "public-subnet"
-#     }
-# }
+
+
 
 
 # resource "aws_internet_gateway" "my-igw" {

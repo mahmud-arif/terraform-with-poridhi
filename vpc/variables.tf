@@ -7,7 +7,7 @@ variable "vpc_name" {
   type = string
 }
 
-variable "subnet_configs" {
+variable "public_subnet_configs" {
   type = list(object({
     subnet_cidr_blocks = string,
     name               = string,
@@ -16,11 +16,20 @@ variable "subnet_configs" {
   }))
 }
 
+variable "private_subnet_configs" {
+  type = list(object({
+    subnet_cidr_blocks = string,
+    name               = string,
+    availability_zone  = string
+  }))
+}
+
 variable "igw_name" {
   type = string
 }
 
-variable "nat_gateway_for_subnet" {
-  type = string
+variable "single_nat_gateway" {
+  type    = bool
+  default = null
 }
 

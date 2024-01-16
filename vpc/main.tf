@@ -9,14 +9,23 @@ resource "aws_vpc" "my_vpc" {
 
 
 resource "aws_subnet" "public_subnet" {
-  count             = length(var.subnet_configs)
-  vpc_id            = resource.aws_vpc.my_vpc.id
-  cidr_block        = var.subnet_configs[count.index].subnet_cidr_blocks
-  availability_zone = var.subnet_configs[count.index].availability_zone
-  # Change to your desired availability zone
-  map_public_ip_on_launch = var.subnet_configs[count.index].allow_public_ip
+  count                   = length(var.public_subnet_configs)
+  vpc_id                  = resource.aws_vpc.my_vpc.id
+  cidr_block              = var.public_subnet_configs[count.index].subnet_cidr_blocks
+  availability_zone       = var.public_subnet_configs[count.index].availability_zone
+  map_public_ip_on_launch = var.public_subnet_configs[count.index].allow_public_ip
   tags = {
-    Name = var.subnet_configs[count.index].name
+    Name = var.public_subnet_configs[count.index].name
+  }
+}
+
+resource "aws_subnet" "private_subnet" {
+  count             = length(var.private_subnet_configs)
+  vpc_id            = resource.aws_vpc.my_vpc.id
+  cidr_block        = var.private_subnet_configs[count.index].subnet_cidr_blocks
+  availability_zone = var.private_subnet_configs[count.index].availability_zone
+  tags = {
+    Name = var.private_subnet_configs[count.index].name
   }
 }
 
@@ -28,10 +37,14 @@ resource "aws_internet_gateway" "my-igw" {
   }
 }
 
+
 resource "aws_nat_gateway" "my_nat_gateway" {
-  subnet_id     = aws_subnet.public_subnet.id
+  # connectivity_type = "private"
+  count     = var.single_nat_gateway == true ? 1 : length(var.public_subnet_configs)
+  subnet_id = var.single_nat_gateway == true ? resource.aws_subnet.public_subnet[0].id : resource.aws_subnet.public_subnet[count.index].id
 
   tags = {
-    Name = var.my_nat_gateway
+    Name = "my_nat_gateway_${count.index}"
   }
 }
+
