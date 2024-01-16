@@ -18,6 +18,7 @@ module "vpc_module" {
   source   = "./vpc"
   vpc_cidr = "10.0.0.0/16"
   vpc_name = "my_cluster_vpc"
+  azs      = ["us-east-1a", "us-east-1b"]
   public_subnet_configs = [
     {
       subnet_cidr_blocks = "10.0.2.0/24",
@@ -31,8 +32,8 @@ module "vpc_module" {
       name               = "public_subnet",
       availability_zone  = "us-east-1a"
   }]
-  igw_name = "my_igw"
-
+  igw_name           = "my_igw"
+  enable_nat_gateway = true
   single_nat_gateway = true
 }
 
@@ -59,8 +60,6 @@ module "vpc_module" {
 #     }
 
 # }
-
-
 
 
 # resource "aws_route_table_association" "public-rtb-subnet" {
