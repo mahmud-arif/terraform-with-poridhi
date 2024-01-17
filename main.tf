@@ -37,231 +37,161 @@ module "vpc_module" {
   single_nat_gateway = true
 }
 
+resource "aws_key_pair" "ssh_key" {
+  key_name   = "k8-ssh"
+  public_key = file("/Users/mahmud/.ssh/id_rsa.pub")
+}
+
+
+module "security_rules_k8s" {
+  source              = "./security_group"
+  security_group_name = "k8s-security-group"
+  vpc_id              = module.vpc_module.vpc_id
+  ingress_rules = [
+    {
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = ["10.0.0.0/16"]
+    },
+    {
+      from_port   = 6443
+      to_port     = 6443
+      protocol    = "tcp"
+      cidr_blocks = ["10.0.0.0/16"]
+    },
+    {
+      from_port   = 2379
+      to_port     = 2380
+      protocol    = "tcp"
+      cidr_blocks = ["10.0.0.0/16"]
+    },
+    {
+      from_port   = 10250
+      to_port     = 10250
+      protocol    = "tcp"
+      cidr_blocks = ["10.0.0.0/16"]
+    },
+    {
+      from_port   = 8472
+      to_port     = 8472
+      protocol    = "tcp"
+      cidr_blocks = ["10.0.0.0/16"]
+    },
+    {
+      from_port   = 51820
+      to_port     = 51821
+      protocol    = "tcp"
+      cidr_blocks = ["10.0.0.0/16"]
+    }
+  ]
+}
+
+module "k8s_node" {
+  source = "./ec2_instance"
+  instances = [
+    {
+      name              = "k8s-master",
+      instance_type     = "t2.medium"
+      ami               = "ami-053b0d53c279acc90" # Ubuntu 20.04 LTS AMI ID (Update with the latest AMI ID)
+      subnet_id         = module.vpc_module.private_subnet_ids[0]
+      key_name          = resource.aws_key_pair.ssh_key.key_name
+      root_block_device = 20
+      security_group    = [module.security_rules_k8s.security_group_id]
+    },
+    {
+      name              = "k8s-worker-1",
+      instance_type     = "t2.medium"
+      ami               = "ami-053b0d53c279acc90" # Ubuntu 20.04 LTS AMI ID (Update with the latest AMI ID)
+      subnet_id         = module.vpc_module.private_subnet_ids[0]
+      key_name          = resource.aws_key_pair.ssh_key.key_name
+      root_block_device = 20
+      security_group    = [module.security_rules_k8s.security_group_id]
+    },
+    {
+      name              = "k8s-worker-2",
+      instance_type     = "t2.medium"
+      ami               = "ami-053b0d53c279acc90" # Ubuntu 20.04 LTS AMI ID (Update with the latest AMI ID)
+      subnet_id         = module.vpc_module.private_subnet_ids[0]
+      key_name          = resource.aws_key_pair.ssh_key.key_name
+      root_block_device = 20
+      security_group    = [module.security_rules_k8s.security_group_id]
+    }
+  ]
+
+  depends_on = [module.security_rules_k8s]
+}
+
+
+
+module "security_group_bashtion" {
+  source              = "./security_group"
+  security_group_name = "bastion-security-group"
+  vpc_id              = module.vpc_module.vpc_id
+  ingress_rules = [
+    {
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  ]
+}
+
+module "security_group_loadbalancer" {
+  source              = "./security_group"
+  security_group_name = "loadbalancer-security-group"
+  vpc_id              = module.vpc_module.vpc_id
+  ingress_rules = [
+    {
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    },
+    {
+      from_port   = 80
+      to_port     = 80
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  ]
+}
+
+module "other_nodes" {
+  source = "./ec2_instance"
+  instances = [
+    {
+      name              = "bastionHost",
+      instance_type     = "t2.small"
+      ami               = "ami-053b0d53c279acc90" # Ubuntu 20.04 LTS AMI ID (Update with the latest AMI ID)
+      subnet_id         = module.vpc_module.public_subnet_ids[0]
+      key_name          = resource.aws_key_pair.ssh_key.key_name
+      root_block_device = 10
+      security_group    = [module.security_group_bashtion.security_group_id]
+    },
+    {
+      name              = "loadbalancer"
+      instance_type     = "t2.small"
+      ami               = "ami-053b0d53c279acc90" # Ubuntu 20.04 LTS AMI ID (Update with the latest AMI ID)
+      subnet_id         = module.vpc_module.public_subnet_ids[0]
+      key_name          = resource.aws_key_pair.ssh_key.key_name
+      root_block_device = 15
+      security_group    = [module.security_group_loadbalancer.security_group_id]
+    }
+  ]
+}
 
 
 
 
-# resource "aws_internet_gateway" "my-igw" {
-#   vpc_id = aws_vpc.my_vpc.id
-
-#   tags = {
-#     Name: "k8-igw"
-#   }
-# }
-
-# resource "aws_route_table" "public-route-table" {
-#   vpc_id = aws_vpc.my_vpc.id
-
-#   route {
-#       cidr_block = "0.0.0.0/0"
-#       gateway_id = aws_internet_gateway.my-igw.id
-
-
-#     }
-
-# }
-
-
-# resource "aws_route_table_association" "public-rtb-subnet" {
-#   subnet_id = aws_subnet.public_subnet.id
-#   route_table_id = aws_route_table.public-route-table.id
-# }
-
-
-# resource "aws_subnet" "private_subnet" {
-#   vpc_id                  = aws_vpc.my_vpc.id
-#   cidr_block              = "10.0.4.0/24" 
-#   availability_zone       = "us-east-1b"  
-#       tags = {
-#         Name = "private-subnet"
-#     }
-# }
 
 
 
-# resource "aws_nat_gateway" "my_nat_gateway" {
-#   subnet_id     = aws_subnet.public_subnet.id
-
-#   tags = {
-#     Name = "my-nat-gateway"
-#   }
-# }
-
-# # Route table for private subnet with NAT Gateway route
-# resource "aws_route_table" "private_route_table" {
-#   vpc_id = aws_vpc.my_vpc.id
-#   route {
-#     cidr_block = "0.0.0.0/0"
-#     nat_gateway_id = aws_nat_gateway.my_nat_gateway.id
-#   }
-
-#   tags = {
-#     Name = "private-route-table"
-#   }
-# }
-
-# resource "aws_route_table_association" "private_subnet_association" {
-#   subnet_id      = aws_subnet.private_subnet.id
-#   route_table_id = aws_route_table.private_route_table.id
-# }
 
 
 
-# resource "aws_security_group" "master_sg" {
-#   name        = "master"
-#   description = "Security group for master instance"
-#   vpc_id = aws_vpc.my_vpc.id
-
-#   # Ingress rule for SSH (port 22)
-#   ingress {
-#     from_port   = 22
-#     to_port     = 22
-#     protocol    = "tcp"
-#     cidr_blocks = ["10.0.0.0/16"] # Be cautious with this setting; it allows SSH access from any IP
-#   }
-#   # Ingress rule for port 6443
-#   ingress {
-#     from_port   = 6443
-#     to_port     = 6443
-#     protocol    = "tcp"
-#     cidr_blocks = ["10.0.0.0/16"] # You can restrict this to specific IPs if needed
-#   }
-
-#   # Ingress rule for ports 2379-2380
-#   ingress {
-#     from_port   = 2379
-#     to_port     = 2380
-#     protocol    = "tcp"
-#     cidr_blocks = ["10.0.0.0/16"] # You can restrict this to specific IPs if needed
-#   }
-
-#   # Ingress rule for ports 10250-10260
-#   ingress {
-#     from_port   = 10250
-#     to_port     = 10260
-#     protocol    = "tcp"
-#     cidr_blocks = ["10.0.0.0/16"] # You can restrict this to specific IPs if needed
-#   }
 
 
 
-#     ingress {
-#     from_port   = 6782
-#     to_port     = 6782
-#     protocol    = "tcp"
-#     cidr_blocks = ["10.0.0.0/16"] # You can restrict this to specific IPs if needed
-#   }
 
-#   # Egress rule to allow all outbound traffic
-#   egress {
-#     from_port   = 0
-#     to_port     = 0
-#     protocol    = "-1"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-
-#   tags = {
-#     Name = "master-sg"
-#   }
-# }
-# #
-# resource "aws_security_group" "worker_sg" {
-#   name        = "worker"
-#   description = "Security group for worker instances"
-#   vpc_id = aws_vpc.my_vpc.id
-#   # Ingress rule for SSH (port 22)
-#   ingress {
-#     from_port   = 22
-#     to_port     = 22
-#     protocol    = "tcp"
-#     cidr_blocks = ["10.0.0.0/16"] # Be cautious with this setting; it allows SSH access from any IP
-#   }
-
-#   # Ingress rule for port 10250
-#   ingress {
-#     from_port   = 10250
-#     to_port     = 10250
-#     protocol    = "tcp"
-#     cidr_blocks = ["10.0.0.0/16"] # You can restrict this to specific IPs if needed
-#   }
-
-#   # Ingress rule for ports 30000-32767
-#   ingress {
-#     from_port   = 30000
-#     to_port     = 32767
-#     protocol    = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"] # You can restrict this to specific IPs if needed
-#   }
-
-
-
-#   # Egress rule to allow all outbound traffic
-#   egress {
-#     from_port   = 0
-#     to_port     = 0
-#     protocol    = "-1"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-
-#   tags = {
-#     Name = "worker-sg"
-#   }
-# }
-
-# resource "aws_key_pair" "ssh-key" {
-#   key_name   = "k8-ssh"
-#   public_key = file("/Users/mahmud/.ssh/id_rsa.pub")
-# }
-
-# # Launch EC2 instances
-# resource "aws_instance" "master" {
-#   ami           = "ami-053b0d53c279acc90" # Ubuntu 20.04 LTS AMI ID (Update with the latest AMI ID)
-#   instance_type = "t2.medium"
-#   subnet_id     = aws_subnet.private_subnet.id
-#   key_name      = aws_key_pair.ssh-key.key_name
-#   vpc_security_group_ids  = [aws_security_group.master_sg.id]
-#   root_block_device {
-#     volume_size = 20
-#   }
-#   tags = {
-#     Name = "master"
-#   }
-# }
-
-# resource "aws_instance" "worker1" {
-#   ami           = "ami-053b0d53c279acc90" # Ubuntu 20.04 LTS AMI ID (Update with the latest AMI ID)
-#   instance_type = "t2.medium"
-#   subnet_id     = aws_subnet.private_subnet.id
-#   key_name      = aws_key_pair.ssh-key.key_name
-#   security_groups = [aws_security_group.worker_sg.id]
-#   root_block_device {
-#     volume_size = 20
-#   }
-#   tags = {
-#     Name = "worker1"
-#   }
-# }
-
-# resource "aws_instance" "worker2" {
-#   ami           = "ami-053b0d53c279acc90" # Ubuntu 20.04 LTS AMI ID (Update with the latest AMI ID)
-#   instance_type = "t2.medium"
-#   subnet_id     = aws_subnet.private_subnet.id
-#   key_name      = aws_key_pair.ssh-key.key_name
-#   security_groups = [aws_security_group.worker_sg.id]
-#   root_block_device {
-#     volume_size = 20
-#   }
-#   tags = {
-#     Name = "worker2"
-#   }
-# }
-
-
-# output "instance_private_ips" {
-#   value = [
-#     aws_instance.master.private_ip,
-#     aws_instance.worker1.private_ip,
-#     aws_instance.worker2.private_ip,
-#     # Add more instances as needed
-#   ]
-# }

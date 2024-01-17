@@ -39,14 +39,14 @@ resource "aws_internet_gateway" "my_igw" {
 }
 
 locals {
-  create_public_subnet = length(var.public_subnet_configs) > 0
+  create_public_subnets = length(var.public_subnet_configs) > 0
 }
 
 
 resource "aws_route_table" "public" {
   count = local.create_public_subnets ? 1 : 0
 
-  vpc_id = var.vpc_id
+  vpc_id = resource.aws_vpc.my_vpc.id
 
   tags = { "Name" = "public-route-table" }
 }
@@ -54,22 +54,19 @@ resource "aws_route_table" "public" {
 resource "aws_route_table_association" "public" {
   count = local.create_public_subnets ? length(var.public_subnet_configs) : 0
 
-  subnet_id      = element(aws_subnet.public[*].id, count.index)
+  subnet_id      = element(aws_subnet.public_subnet[*].id, count.index)
   route_table_id = aws_route_table.public[0].id
 }
 
 
 
 resource "aws_route" "public_internet_gateway" {
-  count = local.create_public_subnets && var.igw_name ? 1 : 0
+  count = local.create_public_subnets && var.create_igw ? 1 : 0
 
   route_table_id         = resource.aws_route_table.public[0].id
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = resource.aws_internet_gateway.my_igw.id
 
-  timeouts {
-    create = "5m"
-  }
 }
 
 
@@ -82,7 +79,7 @@ locals {
 resource "aws_route_table" "private" {
   count = local.create_private_subnets ? local.nat_gateway_count : 0
 
-  vpc_id = var.vpc_id
+  vpc_id = resource.aws_vpc.my_vpc.id
 
   tags = {
     "Name" = var.single_nat_gateway ? "private-route-table" : format(
@@ -157,8 +154,5 @@ resource "aws_route" "private_nat_gateway" {
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = element(resource.aws_nat_gateway.my_nat_gateway[*].id, count.index)
 
-  timeouts {
-    create = "5m"
-  }
 }
 

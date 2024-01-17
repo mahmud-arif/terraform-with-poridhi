@@ -32,6 +32,11 @@ variable "igw_name" {
   type = string
 }
 
+variable "create_igw" {
+  type    = bool
+  default = true
+}
+
 variable "enable_nat_gateway" {
   type    = bool
   default = false
