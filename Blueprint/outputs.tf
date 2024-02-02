@@ -44,10 +44,10 @@ output "bastion_sg_id" {
 
 }
 
-output "k8s_sg_id" {
-  description = "The ID of the instance"
-  value       = module.k8s_instance_sg.security_group_id
-}
+# output "k8s_sg_id" {
+#   description = "The ID of the instance"
+#   value       = module.k8s_instance_sg.security_group_id
+# }
 
 output "loadbalancer_sg_id" {
   description = "The ID of the instance"

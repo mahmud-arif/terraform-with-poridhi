@@ -79,11 +79,65 @@ variable "bastion_sg" {
   default     = "bastion-sg"
 }
 
-variable "k8s_sg" {
-  description = "k8s instance security group Name"
+
+# master Security group variables
+
+variable "k8s_master_sg_name" {
+  description = "k8s master instance security group Name"
   type        = string
-  default     = "k8s-sg"
+  default     = "k8s-master-sg"
 }
+
+variable "k8s_master_ingress_rules" {
+  description = "k8s master default ingerss rule only with name example ssh-tcp"
+  type        = list(string)
+}
+
+
+variable "k8s_master_ingress_with_cidr_blocks" {
+  type = list(object({
+    from_port   = number
+    to_port     = number
+    protocol    = string
+    cidr_blocks = string
+  }))
+}
+
+variable "k8s_master_egress_rules" {
+  type    = list(string)
+  default = ["all-all"]
+}
+
+
+# k8s worker node security group
+
+variable "k8s_worker_sg_name" {
+  description = "k8s worker instance security group Name"
+  type        = string
+  default     = "k8s-worker-sg"
+}
+
+variable "k8s_worker_ingress_rules" {
+  description = "k8s worker default ingerss rule only with name example ssh-tcp"
+  type        = list(string)
+}
+
+
+variable "k8s_worker_ingress_with_cidr_blocks" {
+  type = list(object({
+    from_port   = number
+    to_port     = number
+    protocol    = string
+    cidr_blocks = string
+  }))
+}
+
+variable "k8s_worker_egress_rules" {
+  type    = list(string)
+  default = ["all-all"]
+}
+
+
 
 
 variable "loadbalancer_sg" {
@@ -100,7 +154,6 @@ variable "bastion_instance" {
     name          = string
     instance_type = string
     ami           = string
-    subnet_id     = string
     key_name      = string
     root_block_device = optional(list(object({
       encrypted   = optional(bool)
@@ -109,7 +162,6 @@ variable "bastion_instance" {
       volume_size = optional(number)
       tags        = optional(map(string))
     })))
-    security_group = optional(list(string))
   })
 }
 
@@ -120,7 +172,6 @@ variable "k8s_instances" {
     name          = string
     instance_type = string
     ami           = string
-    subnet_id     = string
     key_name      = string
     root_block_device = optional(list(object({
       encrypted   = optional(bool)
@@ -140,7 +191,6 @@ variable "loadbalancer_instance" {
     instance_type               = string
     ami                         = string
     associate_public_ip_address = string
-    subnet_id                   = string
     key_name                    = string
     root_block_device = optional(list(object({
       encrypted   = optional(bool)
@@ -149,6 +199,5 @@ variable "loadbalancer_instance" {
       volume_size = optional(number)
       tags        = optional(map(string))
     })))
-    security_group = optional(list(string))
   })
 }
